@@ -1,0 +1,14 @@
+# 建置產物
+target/
+template-out/
+template-classes/
+*.class
+
+# 建置相依(大、含 Mojang/Paper 產物,自行放置)
+nms-lib/
+
+# 暫存
+.pc/
+.cptest/
+*.log
+srt/

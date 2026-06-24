@@ -1,0 +1,203 @@
+原版 vanilla — spark.lucko.me/WOVkupfiJx — 主執行緒最重路徑 root→葉,共 200 層
+(載入一個放地圖畫的箱子;最底層在 parse lore 的顏色)
+---------------------------------------------------------------
+  1| 99.2% | Thread.run
+  2| 96.8% | Thread.runWith
+  3| 94.5% | 0x00007fe224f19c70.run
+  4| 92.2% | MinecraftServer.lambda$spin$2
+  5| 89.8% | MinecraftServer.runServer
+  6| 80.9% | MinecraftServer.processPacketsAndTick
+  7| 80.2% | DedicatedServer.tickServer
+  8| 79.5% | MinecraftServer.tickServer
+  9| 78.8% | MinecraftServer.tickChildren
+ 10| 72.2% | DedicatedServer.tickConnection
+ 11| 71.6% | DedicatedServer.handleConsoleInputs
+ 12| 71.1% | Commands.performPrefixedCommand
+ 13| 70.5% | Commands.performCommand
+ 14| 69.9% | Commands.performCommand
+ 15| 69.3% | Commands.executeCommandInContext
+ 16| 68.7% | ExecutionContext.runCommandQueue
+ 17| 68.2% | CommandQueueEntry.execute
+ 18| 67.6% | 0x00007fe225255a28.execute
+ 19| 67.0% | UnboundEntryAction.lambda$bind$0
+ 20| 66.4% | ExecuteCommand.execute
+ 21| 65.8% | ExecuteCommand.execute
+ 22| 65.3% | ContextChain.runExecutable
+ 23| 64.7% | 0x00007fe224dfc218.run
+ 24| 64.1% | ForceLoadCommand.lambda$register$3
+ 25| 63.5% | ForceLoadCommand.changeForceLoad
+ 26| 62.9% | ServerLevel.setChunkForced
+ 27| 62.4% | Level.getChunk
+ 28| 61.8% | ServerChunkCache.getChunk
+ 29| 61.2% | ServerChunkCache.getChunkFallback
+ 30| 60.6% | ServerChunkCache.syncLoad
+ 31| 60.0% | ServerChunkCache$MainThreadExecutor.managedBlock
+ 32| 59.5% | BlockableEventLoop.managedBlock
+ 33| 58.5% | ServerChunkCache$MainThreadExecutor.pollTask
+ 34| 58.0% | ChunkTaskScheduler.executeMainThreadTask
+ 35| 57.5% | PrioritisedTaskQueue.executeTask
+ 36| 57.1% | PrioritisedTaskQueue$PrioritisedQueuedTask.execute
+ 37| 56.6% | ChunkFullTask.run
+ 38| 56.1% | LevelChunk.runPostLoad
+ 39| 55.6% | 0x00007fe2251bafb8.run
+ 40| 55.1% | SerializableChunkData.lambda$postLoadChunk$11
+ 41| 54.6% | BlockEntity.loadStatic
+ 42| 54.1% | BlockEntity.loadWithComponents
+ 43| 53.6% | ChestBlockEntity.loadAdditional
+ 44| 53.2% | ContainerHelper.loadAllItems
+ 45| 52.7% | AbstractIterator.hasNext
+ 46| 52.2% | AbstractIterator.tryToComputeNext
+ 47| 51.7% | TagValueInput$TypedListWrapper$1.computeNext
+ 48| 51.2% | Decoder.parse
+ 49| 50.7% | MapCodec$MapCodecCodec.decode
+ 50| 50.3% | MapDecoder.compressedDecode
+ 51| 49.8% | DataResult$Success.flatMap
+ 52| 49.3% | 0x00007fe224c162a8.apply
+ 53| 48.8% | MapDecoder.lambda$compressedDecode$1
+ 54| 48.3% | RecordCodecBuilder$2.decode
+ 55| 47.8% | RecordCodecBuilder$Instance$3.decode
+ 56| 47.4% | MapCodec$RecursiveMapCodec.decode
+ 57| 46.9% | RecordCodecBuilder$2.decode
+ 58| 46.4% | RecordCodecBuilder$Instance$5.decode
+ 59| 45.9% | MapCodec$2.decode
+ 60| 45.4% | MapDecoder$4.decode
+ 61| 44.9% | OptionalFieldCodec.decode
+ 62| 44.4% | Decoder.parse
+ 63| 44.0% | Codec$2.decode
+ 64| 43.5% | Decoder$2.decode
+ 65| 43.0% | DispatchedMapCodec.decode
+ 66| 42.5% | DataResult$Success.flatMap
+ 67| 42.1% | 0x00007fe224d25838.apply
+ 68| 41.6% | DispatchedMapCodec.lambda$decode$5
+ 69| 41.1% | ReferencePipeline.reduce
+ 70| 40.6% | AbstractPipeline.evaluate
+ 71| 40.1% | ReduceOps$ReduceOp.evaluateSequential
+ 72| 39.7% | AbstractPipeline.wrapAndCopyInto
+ 73| 39.2% | AbstractPipeline.copyInto
+ 74| 38.7% | Object2ObjectOpenHashMap$EntrySpliterator.forEachRemaining
+ 75| 38.2% | Object2ObjectOpenHashMap$MapSpliterator.forEachRemaining
+ 76| 37.8% | Object2ObjectOpenHashMap$EntrySpliterator.acceptOnIndex
+ 77| 37.3% | Object2ObjectOpenHashMap$EntrySpliterator.acceptOnIndex
+ 78| 36.8% | ReferencePipeline$3$1.accept
+ 79| 36.3% | ReduceOps$1ReducingSink.accept
+ 80| 35.9% | 0x00007fe224d25a78.apply
+ 81| 35.4% | DispatchedMapCodec.lambda$decode$0
+ 82| 34.9% | DispatchedMapCodec.parseEntry
+ 83| 34.4% | DataResult$Success.flatMap
+ 84| 34.0% | 0x00007fe224d26a10.apply
+ 85| 33.5% | DispatchedMapCodec.lambda$parseEntry$6
+ 86| 33.0% | Decoder.parse
+ 87| 32.5% | EncoderCache$2.decode
+ 88| 31.7% | Codec$2.decode
+ 89| 31.3% | Decoder$2.decode
+ 90| 30.8% | ListCodec.decode
+ 91| 30.3% | DataResult$Success.flatMap
+ 92| 29.9% | 0x00007fe224c17460.apply
+ 93| 29.4% | ListCodec.lambda$decode$2
+ 94| 28.9% | 0x00007fe2251b5230.accept
+ 95| 28.5% | Iterable.forEach
+ 96| 28.0% | 0x00007fe224c178b8.accept
+ 97| 27.6% | ListCodec$DecoderState.accept
+ 98| 27.1% | MapCodec$MapCodecCodec.decode
+ 99| 26.7% | MapDecoder.compressedDecode
+100| 26.2% | DataResult$Success.flatMap
+101| 25.8% | 0x00007fe224c162a8.apply
+102| 25.3% | MapDecoder.lambda$compressedDecode$1
+103| 24.9% | RecordCodecBuilder$2.decode
+104| 24.5% | RecordCodecBuilder$Instance$3.decode
+105| 24.0% | MapCodec$2.decode
+106| 23.6% | FieldDecoder.decode
+107| 23.1% | Decoder.parse
+108| 22.6% | Codec$RecursiveCodec.decode
+109| 22.2% | MapCodec$MapCodecCodec.decode
+110| 21.8% | MapDecoder.compressedDecode
+111| 21.4% | DataResult$Success.flatMap
+112| 21.0% | 0x00007fe224c162a8.apply
+113| 20.5% | MapDecoder.lambda$compressedDecode$1
+114| 20.1% | MapCodec$RecursiveMapCodec.decode
+115| 19.7% | RecordCodecBuilder$2.decode
+116| 19.3% | RecordCodecBuilder$Instance$5.decode
+117| 18.8% | MapCodec$2.decode
+118| 18.1% | MapDecoder$4.decode
+119| 17.7% | OptionalFieldCodec.decode
+120| 17.3% | Decoder.parse
+121| 17.0% | Codec$2.decode
+122| 16.6% | Decoder$2.decode
+123| 16.2% | DispatchedMapCodec.decode
+124| 15.8% | DataResult$Success.flatMap
+125| 15.5% | 0x00007fe224d25838.apply
+126| 15.1% | DispatchedMapCodec.lambda$decode$5
+127| 14.7% | ReferencePipeline.reduce
+128| 14.3% | AbstractPipeline.evaluate
+129| 14.0% | ReduceOps$ReduceOp.evaluateSequential
+130| 13.6% | AbstractPipeline.wrapAndCopyInto
+131| 13.3% | AbstractPipeline.copyInto
+132| 13.0% | Object2ObjectOpenHashMap$EntrySpliterator.forEachRemaining
+133| 12.6% | Object2ObjectOpenHashMap$MapSpliterator.forEachRemaining
+134| 12.3% | Object2ObjectOpenHashMap$EntrySpliterator.acceptOnIndex
+135| 11.9% | Object2ObjectOpenHashMap$EntrySpliterator.acceptOnIndex
+136| 11.6% | ReferencePipeline$3$1.accept
+137| 11.2% | ReduceOps$1ReducingSink.accept
+138| 10.9% | 0x00007fe224d25a78.apply
+139| 10.6% | DispatchedMapCodec.lambda$decode$0
+140| 10.3% | DispatchedMapCodec.parseEntry
+141|  9.6% | DataResult$Success.flatMap
+142|  9.3% | 0x00007fe224d26a10.apply
+143|  9.1% | DispatchedMapCodec.lambda$parseEntry$6
+144|  8.8% | Decoder.parse
+145|  7.9% | EncoderCache$2.decode
+146|  7.2% | Codec$RecursiveCodec.decode
+147|  7.0% | Codec$2.decode
+148|  6.8% | Decoder$2.decode
+149|  6.6% | EitherCodec.decode
+150|  6.4% | ComponentSerialization$3.decode
+151|  6.2% | MapCodec$MapCodecCodec.decode
+152|  6.0% | MapDecoder.compressedDecode
+153|  5.8% | DataResult$Success.flatMap
+154|  5.6% | 0x00007fe224c162a8.apply
+155|  5.4% | MapDecoder.lambda$compressedDecode$1
+156|  5.3% | RecordCodecBuilder$2.decode
+157|  5.1% | RecordCodecBuilder$Instance$5.decode
+158|  4.7% | MapCodec$2.decode
+159|  4.6% | MapDecoder$4.decode
+160|  4.4% | OptionalFieldCodec.decode
+161|  4.2% | Decoder.parse
+162|  4.1% | Codec$2.decode
+163|  3.9% | Decoder$1.decode
+164|  3.7% | ListCodec.decode
+165|  3.6% | DataResult$Success.flatMap
+166|  3.4% | 0x00007fe224c17460.apply
+167|  3.3% | ListCodec.lambda$decode$2
+168|  3.1% | 0x00007fe2251b5230.accept
+169|  2.9% | Iterable.forEach
+170|  2.8% | 0x00007fe224c178b8.accept
+171|  2.6% | ListCodec$DecoderState.accept
+172|  2.5% | Codec$RecursiveCodec.decode
+173|  2.4% | Codec$2.decode
+174|  2.2% | Decoder$2.decode
+175|  2.1% | EitherCodec.decode
+176|  1.9% | ComponentSerialization$3.decode
+177|  1.8% | MapCodec$MapCodecCodec.decode
+178|  1.7% | MapDecoder.compressedDecode
+179|  1.6% | DataResult$Success.flatMap
+180|  1.4% | 0x00007fe224c162a8.apply
+181|  1.3% | MapDecoder.lambda$compressedDecode$1
+182|  1.2% | RecordCodecBuilder$2.decode
+183|  1.1% | RecordCodecBuilder$Instance$5.decode
+184|  0.6% | RecordCodecBuilder$2.decode
+185|  0.5% | RecordCodecBuilder$Instance$5.decode
+186|  0.4% | RecordCodecBuilder$Instance$5.decode
+187|  0.3% | MapDecoder$4.decode
+188|  0.3% | RecordCodecBuilder$Instance$5.decode
+189|  0.2% | RecordCodecBuilder$Instance$3.decode
+190|  0.1% | OptionalFieldCodec.decode
+191|  0.1% | Decoder.parse
+192|  0.0% | Codec$2.decode
+193|  0.0% | Decoder$1.decode
+194|  0.0% | DataResult$Success.flatMap
+195|  0.0% | 0x00007fe224c9dd88.apply
+196|  0.0% | Decoder$1.lambda$decode$1
+197|  0.0% | 0x00007fe224555e70.apply
+198|  0.0% | TextColor.parseColor
+199|  0.0% | RegularImmutableMap.get
+200|  0.0% | RegularImmutableMap.get

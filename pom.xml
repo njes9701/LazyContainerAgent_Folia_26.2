@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.github.kuohsuanlo</groupId>
+    <artifactId>LazyContainerAgent</artifactId>
+    <version>1.21.11-1</version>
+    <packaging>jar</packaging>
+    <name>LazyContainerAgent</name>
+    <description>Lazy container item deserialization / skip-clean-save for plain Paper via a Java agent</description>
+
+    <properties>
+        <!-- 輸出 v21 bytecode(NMS=1.21.11=major65=Java21);agent 純 JDK + relocated ASM -->
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <asm.version>9.10.1</asm.version>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2/</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!-- 純 JDK + ASM:整個 jar 掛到 bootstrap classloader,不可參照 bukkit/NMS。
+             template 另外對真實 NMS 編譯後由 build.sh 注入 jar,不在此編譯單元。 -->
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm</artifactId>
+            <version>${asm.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-tree</artifactId>
+            <version>${asm.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-commons</artifactId>
+            <version>${asm.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>LazyContainerAgent</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Premain-Class>io.github.kuohsuanlo.lazycontainer.LazyContainerAgentMain</Premain-Class>
+                            <Agent-Class>io.github.kuohsuanlo.lazycontainer.LazyContainerAgentMain</Agent-Class>
+                            <Can-Retransform-Classes>true</Can-Retransform-Classes>
+                            <Can-Redefine-Classes>true</Can-Redefine-Classes>
+                            <Implementation-Title>LazyContainerAgent</Implementation-Title>
+                            <Implementation-Vendor>廢土貓大 LogoCat (mcfallout.net)</Implementation-Vendor>
+                            <Built-By>LogoCat</Built-By>
+                            <Author>廢土貓大 LogoCat — mcfallout.net</Author>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <!-- 重定位 ASM:本 jar 在 bootstrap(parent-first),不可遮蔽 Paper/外掛的 org.objectweb.asm -->
+                            <relocations>
+                                <relocation>
+                                    <pattern>org.objectweb.asm</pattern>
+                                    <shadedPattern>io.github.kuohsuanlo.lazycontainer.asm</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

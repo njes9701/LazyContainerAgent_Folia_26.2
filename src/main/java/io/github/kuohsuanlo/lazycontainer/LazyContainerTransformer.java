@@ -1,0 +1,273 @@
+package io.github.kuohsuanlo.lazycontainer;
+
+import java.io.InputStream;
+import java.lang.instrument.ClassFileTransformer;
+import java.security.ProtectionDomain;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.commons.ClassRemapper;
+import org.objectweb.asm.commons.SimpleRemapper;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodNode;
+
+/**
+ * 容器延遲反序列化 / 跳過乾淨重存 的 bytecode 注入。
+ *
+ * <ul>
+ *   <li><b>BaseContainerBlockEntity</b>:把 {@code LazyContainerTemplate} 編好的
+ *       {@code lazycontainer$*} 欄位與方法 splice 進來(owner remap)。</li>
+ *   <li><b>Chest/Barrel/ShulkerBox</b>:(1) 在 {@code getItems()/getContents()} 入口插
+ *       ensure-guard、{@code setItems()} 入口清旗標;(2) 把 load/save 內的
+ *       {@code ContainerHelper.loadAllItems/saveAllItems} 呼叫 redirect 成 base 的 lazy 方法。</li>
+ * </ul>
+ *
+ * <p><b>安全:</b>base 是 leaf 的 superclass,必先載入並 splice;splice 成功才把
+ * {@link LazyContainerRuntime#injected} 設 true。leaf transform 一律先檢查 injected,
+ * base 沒成功就「完全不動 leaf」→ 退回純 vanilla,絕不產生 NoSuchMethodError。任何例外 → 回傳
+ * 原 bytes(該類別維持 vanilla 行為)。</p>
+ */
+public final class LazyContainerTransformer implements ClassFileTransformer {
+
+    private static final String P = "net/minecraft/world/level/block/entity/";
+    static final String BASE = P + "BaseContainerBlockEntity";
+    static final String CHEST = P + "ChestBlockEntity";
+    static final String BARREL = P + "BarrelBlockEntity";
+    static final String SHULKER = P + "ShulkerBoxBlockEntity";
+
+    static final String CH = "net/minecraft/world/ContainerHelper";
+    static final String NNL = "net/minecraft/core/NonNullList";
+    static final String VIN = "net/minecraft/world/level/storage/ValueInput";
+    static final String VOUT = "net/minecraft/world/level/storage/ValueOutput";
+    static final String TAG = "Lnet/minecraft/nbt/Tag;";
+
+    static final String D_LOAD = "(L" + VIN + ";L" + NNL + ";)V";   // loadAllItems / lazycontainer$load
+    static final String D_SAVE2 = "(L" + VOUT + ";L" + NNL + ";)V"; // saveAllItems(2) / lazycontainer$save(NoEmpty)
+    static final String D_SAVE3 = "(L" + VOUT + ";L" + NNL + ";Z)V"; // saveAllItems(3)
+
+    static final String TEMPLATE = "io/github/kuohsuanlo/lazycontainer/LazyContainerTemplate";
+    static final String TEMPLATE_RES = "/io/github/kuohsuanlo/lazycontainer/LazyContainerTemplate.class";
+    static final String PREFIX = "lazycontainer$";
+
+    // splice 用:由 template remap 到 BASE 後抽出的成員(首次用到時建立一次)
+    private volatile List<FieldNode> spliceFields;
+    private volatile List<MethodNode> spliceMethods;
+
+    @Override
+    public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
+                            ProtectionDomain protectionDomain, byte[] classfileBuffer) {
+        if (className == null) {
+            return null;
+        }
+        try {
+            if (BASE.equals(className)) {
+                return spliceBase(classfileBuffer);
+            }
+            if (CHEST.equals(className) || BARREL.equals(className) || SHULKER.equals(className)) {
+                if (!LazyContainerRuntime.injected) {
+                    // base 尚未/未能 splice → 不動 leaf(安全退回 vanilla)
+                    System.err.println("[LazyContainer] base not spliced; skip leaf " + className);
+                    return null;
+                }
+                return transformLeaf(classfileBuffer, className);
+            }
+        } catch (Throwable t) {
+            System.err.println("[LazyContainer] transform failed for " + className + " — leaving vanilla: " + t);
+            t.printStackTrace();
+        }
+        return null;
+    }
+
+    // ───────────────────────────── base splice ─────────────────────────────
+
+    private byte[] spliceBase(byte[] buffer) {
+        loadSpliceMembers();
+        if (spliceFields == null || spliceMethods == null || spliceMethods.isEmpty()) {
+            System.err.println("[LazyContainer] FATAL: template members unavailable; base not spliced");
+            return null;
+        }
+        ClassReader cr = new ClassReader(buffer);
+        ClassWriter cw = new ClassWriter(cr, 0); // 只新增成員,原方法逐位元組複製;splice 方法自帶 frame/maxs
+        ClassVisitor cv = new ClassVisitor(Opcodes.ASM9, cw) {
+            @Override
+            public void visitEnd() {
+                for (FieldNode f : spliceFields) {
+                    f.accept(this);
+                }
+                for (MethodNode m : spliceMethods) {
+                    m.accept(this);
+                }
+                super.visitEnd();
+            }
+        };
+        cr.accept(cv, 0);
+        LazyContainerRuntime.injected = true;
+        System.out.println("[LazyContainer] spliced " + spliceFields.size() + " fields + "
+                + spliceMethods.size() + " methods into BaseContainerBlockEntity");
+        return cw.toByteArray();
+    }
+
+    /** 讀 template bytes,整體 remap(LazyContainerTemplate → BaseContainerBlockEntity),抽出 lazycontainer$ 成員。 */
+    private synchronized void loadSpliceMembers() {
+        if (spliceMethods != null) {
+            return;
+        }
+        try (InputStream in = LazyContainerTransformer.class.getResourceAsStream(TEMPLATE_RES)) {
+            if (in == null) {
+                System.err.println("[LazyContainer] FATAL: template resource not found: " + TEMPLATE_RES);
+                return;
+            }
+            ClassReader tcr = new ClassReader(in.readAllBytes());
+            ClassNode remapped = new ClassNode();
+            tcr.accept(new ClassRemapper(remapped, new SimpleRemapper(TEMPLATE, BASE)), 0);
+
+            List<FieldNode> fs = new ArrayList<>();
+            for (FieldNode f : remapped.fields) {
+                if (f.name.startsWith(PREFIX)) {
+                    fs.add(f);
+                }
+            }
+            List<MethodNode> ms = new ArrayList<>();
+            for (MethodNode m : remapped.methods) {
+                if (m.name.startsWith(PREFIX)) {
+                    ms.add(m);
+                }
+            }
+            spliceFields = fs;
+            spliceMethods = ms;
+        } catch (Throwable t) {
+            System.err.println("[LazyContainer] FATAL: reading template failed: " + t);
+            t.printStackTrace();
+        }
+    }
+
+    // ───────────────────────────── leaf transform ─────────────────────────────
+
+    private byte[] transformLeaf(byte[] buffer, String className) {
+        boolean shulker = SHULKER.equals(className);
+        ClassReader cr = new ClassReader(buffer);
+        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
+        ClassVisitor cv = new ClassVisitor(Opcodes.ASM9, cw) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String desc,
+                                             String sig, String[] exceptions) {
+                MethodVisitor mv = super.visitMethod(access, name, desc, sig, exceptions);
+                // 一律套 redirect;其上再視情況套 guard。注入碼以 leaf 自身為 owner 參照繼承來的
+                // lazycontainer$ 成員(public、合法),receiver 型別精確相符 → 免跨類 assignability。
+                MethodVisitor red = new RedirectMethodVisitor(mv, className, shulker);
+                int guard = guardKind(name, desc);
+                if (guard != GUARD_NONE) {
+                    return new GuardMethodVisitor(red, className, guard);
+                }
+                return red;
+            }
+        };
+        cr.accept(cv, 0);
+        System.out.println("[LazyContainer] transformed leaf " + className);
+        return cw.toByteArray();
+    }
+
+    private static final int GUARD_NONE = 0;
+    private static final int GUARD_ENSURE = 1;
+    private static final int GUARD_CLEAR = 2;
+
+    private static int guardKind(String name, String desc) {
+        if (desc.equals("()L" + NNL + ";") && name.equals("getItems")) {
+            return GUARD_ENSURE;
+        }
+        if (desc.equals("()Ljava/util/List;") && name.equals("getContents")) {
+            return GUARD_ENSURE;
+        }
+        if (desc.equals("(L" + NNL + ";)V") && name.equals("setItems")) {
+            return GUARD_CLEAR;
+        }
+        return GUARD_NONE;
+    }
+
+    /** 方法入口插:ENSURE = {@code if(pending) ensure();};CLEAR = {@code pending=false; raw=null;}。 */
+    private static final class GuardMethodVisitor extends MethodVisitor {
+        private final String owner;
+        private final int kind;
+
+        GuardMethodVisitor(MethodVisitor mv, String owner, int kind) {
+            super(Opcodes.ASM9, mv);
+            this.owner = owner;
+            this.kind = kind;
+        }
+
+        @Override
+        public void visitCode() {
+            super.visitCode();
+            if (kind == GUARD_ENSURE) {
+                Label skip = new Label();
+                super.visitVarInsn(Opcodes.ALOAD, 0);
+                super.visitFieldInsn(Opcodes.GETFIELD, owner, "lazycontainer$pending", "Z");
+                super.visitJumpInsn(Opcodes.IFEQ, skip);
+                super.visitVarInsn(Opcodes.ALOAD, 0);
+                super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "lazycontainer$ensure", "()V", false);
+                super.visitLabel(skip);
+                super.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+            } else { // GUARD_CLEAR
+                super.visitVarInsn(Opcodes.ALOAD, 0);
+                super.visitInsn(Opcodes.ICONST_0);
+                super.visitFieldInsn(Opcodes.PUTFIELD, owner, "lazycontainer$pending", "Z");
+                super.visitVarInsn(Opcodes.ALOAD, 0);
+                super.visitInsn(Opcodes.ACONST_NULL);
+                super.visitFieldInsn(Opcodes.PUTFIELD, owner, "lazycontainer$raw", TAG);
+            }
+        }
+    }
+
+    /**
+     * 把 leaf load/save 內的 {@code ContainerHelper.loadAllItems/saveAllItems} 呼叫,改成呼叫 base 的
+     * lazy 方法。用 {@code ALOAD0;DUP_X2;POP} 把 {@code this} 插到原本兩個引數底下。
+     */
+    private static final class RedirectMethodVisitor extends MethodVisitor {
+        private final String self;   // leaf 自身 internal name(作為 redirect 目標方法 owner)
+        private final boolean shulker;
+
+        RedirectMethodVisitor(MethodVisitor mv, String self, boolean shulker) {
+            super(Opcodes.ASM9, mv);
+            this.self = self;
+            this.shulker = shulker;
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+            if (opcode == Opcodes.INVOKESTATIC && CH.equals(owner)) {
+                if ("loadAllItems".equals(name) && D_LOAD.equals(desc)) {
+                    thisUnderTwo();
+                    super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, self, "lazycontainer$load", D_LOAD, false);
+                    return;
+                }
+                if ("saveAllItems".equals(name) && D_SAVE2.equals(desc)) {
+                    thisUnderTwo();
+                    super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, self, "lazycontainer$save", D_SAVE2, false);
+                    return;
+                }
+                if ("saveAllItems".equals(name) && D_SAVE3.equals(desc) && shulker) {
+                    // [output, items, allowEmpty=false] → 丟掉 bool,改呼叫 saveNoEmpty(output, items)
+                    super.visitInsn(Opcodes.POP);
+                    thisUnderTwo();
+                    super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, self, "lazycontainer$saveNoEmpty", D_SAVE2, false);
+                    return;
+                }
+            }
+            super.visitMethodInsn(opcode, owner, name, desc, itf);
+        }
+
+        /** 堆疊 [a, b] → [this, a, b]。 */
+        private void thisUnderTwo() {
+            super.visitVarInsn(Opcodes.ALOAD, 0);
+            super.visitInsn(Opcodes.DUP_X2);
+            super.visitInsn(Opcodes.POP);
+        }
+    }
+}
