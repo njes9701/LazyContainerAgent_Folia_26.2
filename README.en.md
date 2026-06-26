@@ -3,15 +3,15 @@
 [中文](README.md) ｜ **English**
 
 > **A Java agent that lazily deserializes container items, and writes untouched containers back byte-for-byte.**
-> Built for **Paper 26.2**. It removes two pieces of wasted work that cause Minecraft server lag: unpacking every chest's items from NBT on chunk load, and re-packing them on unload.
+> Built for **Folia 26.2**. It removes two pieces of wasted work that cause Minecraft server lag: unpacking every chest's items from NBT on chunk load, and re-packing them on unload.
 
-> *Keywords: Minecraft, Paper, performance, lag, TPS, chunk loading, container/chest/barrel/shulker box, NBT deserialization, data components, map art, Java agent, ASM, optimization, spark profiler.*
+> *Keywords: Minecraft, Folia, performance, lag, TPS, chunk loading, container/chest/barrel/shulker box, NBT deserialization, data components, map art, Java agent, ASM, optimization, spark profiler.*
 
 ⚠️ **This is a Java agent, NOT a plugin** — attach it with `-javaagent:`. **Do not drop it in `plugins/`** (it does nothing there).
 
 > 🔒 **Version-sensitive (read first)**
-> This agent weaves bytecode **directly into Paper 26.2 / Java 25** internals (template classfile major 69). It is **version-locked**.
-> - **For Paper 26.2 + Java 25 only.** Do not use it on any other Minecraft or Java version.
+> This agent weaves bytecode **directly into Folia 26.2 / Java 25** internals (template classfile major 69). It is **version-locked**.
+> - **For Folia 26.2 + Java 25 only.** Do not use it on any other Minecraft or Java version.
 > - Porting requires: ① recompile `template/` against the matching NMS, ② bump ASM to read the target classfile version, ③ re-validate with shadow mode.
 > - On a version mismatch it **throws on boot or on the first container load** (`VerifyError` / `NoSuchMethodError`). This is a deliberate **fail-stop**: it never silently corrupts or loses data, but the node will not start — so test in a staging environment first.
 
@@ -19,7 +19,7 @@
 
 ## Quick start
 
-> Requires **Paper 26.2 + Java 25**.
+> Requires **Folia 26.2 + Java 25**.
 
 **1. Drop the jar** somewhere the node can see it (next to your server jar is easiest). **Not** in `plugins/` — it's a Java agent, not a plugin.
 
@@ -30,7 +30,7 @@ java ... \
   -javaagent:LazyContainerAgent.jar \
   -Dlazycontainer.shadow=true \
   -Dlazycontainer.verbose=true \
-  -jar <your-Paper>.jar nogui
+  -jar <your-Folia>.jar nogui
 ```
 
 **3. Validate first — don't jump straight to performance.** Run with `shadow=true` for a few days. It byte-compares the optimized output against vanilla; as long as `shadowMismatch` stays **0**, the output is byte-identical to vanilla — **zero data risk**. (Trade-off: shadow mode runs both paths, so no speedup yet.)
@@ -109,7 +109,7 @@ Covers `ChestBlockEntity`, `BarrelBlockEntity`, `ShulkerBoxBlockEntity`. The **s
 
 A plain plugin can't override NMS final methods, so this uses a **Java agent + ASM bytecode injection**:
 
-1. `LazyContainerAgentMain` (premain): appends the jar to the bootstrap classloader (to get past Paper's isolated classloader), then registers the transformer.
+1. `LazyContainerAgentMain` (premain): appends the jar to the bootstrap classloader (to get past Folia/Paper's isolated classloader), then registers the transformer.
 2. `LazyContainerTransformer` (ASM): splices `LazyContainerTemplate` (logic compiled against real NMS, so the compiler verifies the signatures — safer than hand-written ASM) into `BaseContainerBlockEntity`, and redirects the leaf load/save `ContainerHelper` calls to the lazy versions.
 3. `LazyContainerRuntime` (bootstrap, pure JDK): shadow toggle + counters.
 4. **Safety rule:** if the base class isn't spliced successfully, the leaves are left completely untouched → falls back to pure vanilla; any exception → returns the original bytes.
@@ -124,7 +124,7 @@ It changes **when** items are decoded, not **what** a container stores. The on-d
 - **Touched containers** → decoded and saved exactly like vanilla.
 - Only the container's `Items` are affected — never terrain, blocks, entities, lighting, or other block entities.
 
-Validated by: offline JVM bytecode verification; real Paper 26.2 end-to-end round-trips (byte-identical, including data components; 56-container shadow `shadowMismatch=0`); an adversarial review across 8 failure modes (0 data-affecting paths). See [`docs/test-reports/26.2.md`](docs/test-reports/26.2.md), [`FINDINGS.md`](FINDINGS.md), [`ADVERSARIAL-REVIEW.md`](ADVERSARIAL-REVIEW.md).
+Validated for this Folia target by build-time template compilation against Folia 26.2 NMS and jar structure checks. The older Paper 26.2 end-to-end/shadow evidence remains useful background, but Folia boot and shadow round-trip validation are intentionally out of scope for this build-only port. See [`docs/test-reports/26.2.md`](docs/test-reports/26.2.md), [`FINDINGS.md`](FINDINGS.md), [`ADVERSARIAL-REVIEW.md`](ADVERSARIAL-REVIEW.md).
 
 ---
 
@@ -150,10 +150,10 @@ Watch **`shadowMismatch=0`**. With `-Dlazycontainer.dump=true`, both kinds dump 
 ## Build
 
 ```bash
-bash build.sh   # JDK 21; outputs target/LazyContainerAgent.jar
+bash build.sh   # JDK 25 with Folia 26.2 NMS; outputs target/LazyContainerAgent.jar
 ```
 
-Needs `nms-lib/` (your Paper server core's NMS libraries, for `template/` to compile against real NMS). Not committed to git — place it before building.
+Needs `nms-lib/` (your Folia 26.2 server core's NMS libraries, for `template/` to compile against real NMS). Not committed to git — place it before building.
 
 ## Flags
 
@@ -170,7 +170,7 @@ Needs `nms-lib/` (your Paper server core's NMS libraries, for `template/` to com
 ## Limitations
 
 - **Benefit depends on containers being untouched.** Churn / idle storage (load → nobody touches → unload) wins big; a busy hopper/comparator sorting hall materializes containers, so the pure savings shrink (the main benefit there becomes "spread the load-time spike out").
-- **Version-locked** to Paper 26.2 / Java 25. A mismatch fails loudly (VerifyError/NoSuchMethod), never silently.
+- **Version-locked** to Folia 26.2 / Java 25. A mismatch fails loudly (VerifyError/NoSuchMethod), never silently.
 - Does **not** save disk I/O or GC — only the pack/unpack CPU.
 
 ---

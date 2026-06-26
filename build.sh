@@ -3,7 +3,7 @@
 #  1) mvn package      → agent 類別(Runtime/AgentMain/Transformer)+ shaded/relocated ASM + agent manifest
 #  2) javac template   → 對「真實 26.2 mojmap NMS」編譯 LazyContainerTemplate(產生正確的 NMS 符號 bytecode)
 #  3) jar uf           → 把 template .class 當 passive resource 注入 shaded jar(執行期只被讀 bytes、不被載入為類別)
-# 注意:26.2 NMS classfile = major69,template 必須用 JDK 25 編譯;nms-lib/ 放 26.2 mojmap server jar + 其 libraries。
+# 注意:26.2 NMS classfile = major69,template 必須用 JDK 25 編譯;nms-lib/ 放 Folia 26.2 server jar + 其 libraries。
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -12,7 +12,7 @@ export JAVA_HOME
 export PATH="$JAVA_HOME/bin:$PATH"
 
 if [ ! -d nms-lib ] || [ -z "$(ls -A nms-lib/*.jar 2>/dev/null)" ]; then
-  echo "ERROR: nms-lib/ 缺少 NMS 編譯相依 jar(你的 Paper 伺服器核心的 NMS libraries)。" >&2
+  echo "ERROR: nms-lib/ 缺少 NMS 編譯相依 jar(你的 Folia 26.2 伺服器核心的 NMS libraries)。" >&2
   exit 1
 fi
 NMSCP="$(ls nms-lib/*.jar | tr '\n' ':')"

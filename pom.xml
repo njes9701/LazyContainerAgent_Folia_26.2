@@ -6,10 +6,10 @@
 
     <groupId>io.github.kuohsuanlo</groupId>
     <artifactId>LazyContainerAgent</artifactId>
-    <version>26.2-1</version>
+    <version>26.2-folia-1</version>
     <packaging>jar</packaging>
     <name>LazyContainerAgent</name>
-    <description>Lazy container item deserialization / skip-clean-save for plain Paper via a Java agent</description>
+    <description>Lazy container item deserialization / skip-clean-save for Folia 26.2 via a Java agent</description>
 
     <properties>
         <!-- agent 類別輸出 v21 bytecode(純 JDK + relocated ASM,於 Java 25 server 上跑無虞);
@@ -80,7 +80,7 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <!-- 重定位 ASM:本 jar 在 bootstrap(parent-first),不可遮蔽 Paper/外掛的 org.objectweb.asm -->
+                            <!-- 重定位 ASM:本 jar 在 bootstrap(parent-first),不可遮蔽 Folia/外掛的 org.objectweb.asm -->
                             <relocations>
                                 <relocation>
                                     <pattern>org.objectweb.asm</pattern>

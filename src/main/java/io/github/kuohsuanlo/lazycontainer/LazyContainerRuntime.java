@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 純 JDK 相依的執行期支援 + 公開狀態/計數器。
  *
  * <p><b>掛在 bootstrap classloader</b>(agent 會把整個 jar {@code appendToBootstrapClassLoaderSearch}),
- * 故被 splice 進 NMS {@code BaseContainerBlockEntity} 的方法(在 Paper 隔離 classloader)可透過 parent
+ * 故被 splice 進 NMS {@code BaseContainerBlockEntity} 的方法(在 Folia/Paper 隔離 classloader)可透過 parent
  * 委派看到「同一份」本類別 —— 與 LibSetEntityTick 的 registry 模式相同。bootstrap 上的類別只能參照 JDK,
  * 因此這裡不可出現任何 {@code net.minecraft.*} / {@code org.bukkit.*}。</p>
  */

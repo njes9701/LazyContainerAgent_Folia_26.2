@@ -7,7 +7,7 @@ import java.util.jar.JarFile;
 /**
  * Java agent 進入點。以 {@code -javaagent:LazyContainerAgent.jar} 啟動 server。
  *
- * <p>Paper(paperclip)用隔離 classloader 載入 {@code net.minecraft.*},看不到 -javaagent 所在的 app
+ * <p>Folia/Paper(paperclip)用隔離 classloader 載入 {@code net.minecraft.*},看不到 -javaagent 所在的 app
  * classloader。因此先把本 jar(純 JDK + relocated ASM)以
  * {@link Instrumentation#appendToBootstrapClassLoaderSearch} 掛到 bootstrap classloader(所有
  * classloader 的共同祖先),讓被 splice 進 NMS {@code BaseContainerBlockEntity} 的方法能透過 parent

@@ -54,4 +54,4 @@ cd .lctest && bash play.sh /tmp/realworld-copy
 跑數天看 `shadowMismatch=0` + 無玩家回報少東西 → 才考慮關 shadow 拿效能。
 **回滾**:拔掉那段旗標重啟即回 100% vanilla,不需任何資料遷移(磁碟格式從未改變)。
 
-> ⚠️ 版本綁 1.21.11/Java21。版本不符會在開機/第一次載箱子時**大聲報錯**(VerifyError/NoSuchMethod),不會靜默毀資料,但別硬上。
+> ⚠️ 版本綁 Folia 26.2/Java25。版本不符會在開機/第一次載箱子時**大聲報錯**(VerifyError/NoSuchMethod),不會靜默毀資料,但別硬上。
