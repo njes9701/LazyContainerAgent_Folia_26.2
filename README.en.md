@@ -3,15 +3,15 @@
 [中文](README.md) ｜ **English**
 
 > **A Java agent that lazily deserializes container items, and writes untouched containers back byte-for-byte.**
-> Built for **Paper 1.21.11**. It removes two pieces of wasted work that cause Minecraft server lag: unpacking every chest's items from NBT on chunk load, and re-packing them on unload.
+> Built for **Paper 26.2**. It removes two pieces of wasted work that cause Minecraft server lag: unpacking every chest's items from NBT on chunk load, and re-packing them on unload.
 
 > *Keywords: Minecraft, Paper, performance, lag, TPS, chunk loading, container/chest/barrel/shulker box, NBT deserialization, data components, map art, Java agent, ASM, optimization, spark profiler.*
 
 ⚠️ **This is a Java agent, NOT a plugin** — attach it with `-javaagent:`. **Do not drop it in `plugins/`** (it does nothing there).
 
 > 🔒 **Version-sensitive (read first)**
-> This agent weaves bytecode **directly into Paper 1.21.11 / Java 21** internals (classfile major 65). It is **version-locked**.
-> - **For Paper 1.21.11 + Java 21 only.** Do not use it on any other Minecraft or Java version.
+> This agent weaves bytecode **directly into Paper 26.2 / Java 25** internals (template classfile major 69). It is **version-locked**.
+> - **For Paper 26.2 + Java 25 only.** Do not use it on any other Minecraft or Java version.
 > - Porting requires: ① recompile `template/` against the matching NMS, ② bump ASM to read the target classfile version, ③ re-validate with shadow mode.
 > - On a version mismatch it **throws on boot or on the first container load** (`VerifyError` / `NoSuchMethodError`). This is a deliberate **fail-stop**: it never silently corrupts or loses data, but the node will not start — so test in a staging environment first.
 
@@ -19,7 +19,7 @@
 
 ## Quick start
 
-> Requires **Paper 1.21.11 + Java 21**.
+> Requires **Paper 26.2 + Java 25**.
 
 **1. Drop the jar** somewhere the node can see it (next to your server jar is easiest). **Not** in `plugins/` — it's a Java agent, not a plugin.
 
@@ -124,7 +124,7 @@ It changes **when** items are decoded, not **what** a container stores. The on-d
 - **Touched containers** → decoded and saved exactly like vanilla.
 - Only the container's `Items` are affected — never terrain, blocks, entities, lighting, or other block entities.
 
-Validated by: offline JVM bytecode verification; real Paper 1.21.11 end-to-end round-trips (byte-identical, including data components); an adversarial review across 8 failure modes (0 data-affecting paths). See [`FINDINGS.md`](FINDINGS.md), [`ADVERSARIAL-REVIEW.md`](ADVERSARIAL-REVIEW.md).
+Validated by: offline JVM bytecode verification; real Paper 26.2 end-to-end round-trips (byte-identical, including data components; 56-container shadow `shadowMismatch=0`); an adversarial review across 8 failure modes (0 data-affecting paths). See [`docs/test-reports/26.2.md`](docs/test-reports/26.2.md), [`FINDINGS.md`](FINDINGS.md), [`ADVERSARIAL-REVIEW.md`](ADVERSARIAL-REVIEW.md).
 
 ---
 
@@ -170,7 +170,7 @@ Needs `nms-lib/` (your Paper server core's NMS libraries, for `template/` to com
 ## Limitations
 
 - **Benefit depends on containers being untouched.** Churn / idle storage (load → nobody touches → unload) wins big; a busy hopper/comparator sorting hall materializes containers, so the pure savings shrink (the main benefit there becomes "spread the load-time spike out").
-- **Version-locked** to Paper 1.21.11 / Java 21. A mismatch fails loudly (VerifyError/NoSuchMethod), never silently.
+- **Version-locked** to Paper 26.2 / Java 25. A mismatch fails loudly (VerifyError/NoSuchMethod), never silently.
 - Does **not** save disk I/O or GC — only the pack/unpack CPU.
 
 ---
