@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # 建置 LazyContainerAgent:
 #  1) mvn package      → agent 類別(Runtime/AgentMain/Transformer)+ shaded/relocated ASM + agent manifest
-#  2) javac template   → 對「真實 1.21.11 mojmap NMS」編譯 LazyContainerTemplate(產生正確的 NMS 符號 bytecode)
+#  2) javac template   → 對「真實 26.2 mojmap NMS」編譯 LazyContainerTemplate(產生正確的 NMS 符號 bytecode)
 #  3) jar uf           → 把 template .class 當 passive resource 注入 shaded jar(執行期只被讀 bytes、不被載入為類別)
+# 注意:26.2 NMS classfile = major69,template 必須用 JDK 25 編譯;nms-lib/ 放 26.2 mojmap server jar + 其 libraries。
 set -euo pipefail
 cd "$(dirname "$0")"
 
-JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/jdk-21-oracle-x64}"
+JAVA_HOME="${JAVA_HOME:-/home/logocat/.jdks/jdk-25.0.3+9}"
 export JAVA_HOME
 export PATH="$JAVA_HOME/bin:$PATH"
 
